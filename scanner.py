@@ -25,6 +25,8 @@ class Result:
     stop: float | None
     description: str
     source: str
+    category: str = "監視継続"
+    distance_pct: float | None = None
 
 
 def download_daily(ticker: str) -> pd.DataFrame:
@@ -92,8 +94,23 @@ def scan(ticker: str, name: str, df: pd.DataFrame) -> Result:
         signal, trigger, description = "20日線で反発", ma20, "上昇基調で20日線付近に接近し陽線反発＋出来高1.2倍以上"
     else:
         signal, trigger, description = "確認待ち", prior_high, "確定足の上抜け・出来高・トレンド条件が未成立"
+    # Distance to resistance. Do not label a failed breakout as "approaching".
+    # Prefer the converging triangle resistance only if geometry is valid.
+    near_reference = resistance if converging and resistance > 0 else prior_high
+    distance_pct = (near_reference / close - 1.0) * 100 if close > 0 else None
+    confirmed = signal != "確認待ち"
+    if confirmed:
+        category = "買い候補"
+    elif (distance_pct is not None and 0 <= distance_pct <= 2.0
+          and close > ma20 and ma20 > ma50):
+        category = "上抜け接近"
+        trigger = near_reference
+        description = f"抵抗線まで約{distance_pct:.2f}%（未突破）。終値突破・出来高・形状を要確認"
+    else:
+        category = "監視継続"
     # An indicative stop, not a guaranteed fill or a fixed-distance trading instruction.
     stop = min(prior_low, ma20 * 0.985) if signal != "確認待ち" else None
     return Result(ticker, name, str(x.index[-1].date()), close, round(vr, 2), round(ma20, 2),
                   round(ma50, 2), signal, round(trigger, 2), round(stop, 2) if stop else None,
-                  description, f"https://finance.yahoo.com/quote/{ticker}/history/")
+                  description, f"https://finance.yahoo.com/quote/{ticker}/history/",
+                  category, round(distance_pct, 2) if distance_pct is not None else None)
