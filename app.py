@@ -66,3 +66,9 @@ if "results" in st.session_state:
 st.divider()
 st.write("**買い候補の基本条件**：三角保合いの終値上抜け＋出来高20日平均比1.5倍以上＋上昇トレンドなど。最終判断にはTMR10も確認してください。")
 st.caption("これらのシグナルは将来の株価上昇を保証するものではありません。")
+
+
+# Standalone discovery module: preserves the existing SWING SIGNAL screen and state.
+with st.expander('🔎 割安成長株スクリーニング（中長期用）', expanded=False):
+    from value_growth_screener import render as render_value_growth
+    render_value_growth()
